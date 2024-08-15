@@ -76,7 +76,7 @@ processed_items = process_data(data)
 def send_email(to_email, subject, content):
     message = Mail(
         from_email='apitesting91@gmail.com',
-        to_emails=[to_email, 'apitesting91@gmail.com'],  # Send to the client and also BCC to yourself for testing
+        to_emails=[to_email, 'apitesting91@gmail.com'],  # Send to the client and also to yourself for testing. can change emails after
         subject=subject,
         html_content=content
     )
