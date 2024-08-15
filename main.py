@@ -17,7 +17,7 @@ SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
 MONDAY_API_URL = "https://api.monday.com/v2"
 
 # Your actual board ID from Monday.com
-board_id = '7234762094'  # Change this to your actual board ID if different
+board_id = os.getenv('MONDAY_BOARD_ID')  # Change this to your actual board ID if different
 
 # GraphQL query to retrieve specific data from the Monday.com board
 query = f"""
