@@ -4,8 +4,6 @@ This project automates the process of fetching data from a Monday.com board and 
 
 ## Prerequisites
 
-## Prerequisites
-
 - **Python 3.6 or higher**
 - **A Monday.com account with API access**
 - **A Monday.com Board ID**: You will need the specific Board ID from your Monday.com account that you wish to fetch data from.
