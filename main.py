@@ -1,26 +1,32 @@
-# Importing necessary libraries
-import requests  # Used to make HTTP requests to the API
-import json  # Used to handle JSON data
-import os  # Used to manage environment variables (like API keys)
+import os
+import ssl
+import certifi
+import requests
+import json
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
-# Retrieve your Monday.com API key from environment variables
+# Use certifi to set the SSL certificate file
+os.environ['SSL_CERT_FILE'] = certifi.where()
+
+# Retrieve your Monday.com API key and SendGrid API key from environment variables
 MONDAY_API_KEY = os.getenv('MONDAY_API_KEY')
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
 
 # Define the URL for the Monday.com GraphQL API endpoint
 MONDAY_API_URL = "https://api.monday.com/v2"
 
-# Replace 'board_id' with your actual board ID from Monday.com
-board_id = '7234762094'
+# Your actual board ID from Monday.com
+board_id = '7234762094'  # Change this to your actual board ID if different
 
-# GraphQL query to retrieve specific data
+# GraphQL query to retrieve specific data from the Monday.com board
 query = f"""
 {{
     boards(ids: {board_id}) {{
-        items_page(limit: 100) {{
+        items_page {{
             items {{
-                id
                 name
-                column_values(ids: ["name", "email__1", "long_text__1"]) {{
+                column_values {{
                     id
                     text
                 }}
@@ -41,44 +47,49 @@ response = requests.post(MONDAY_API_URL, headers=headers, json={'query': query})
 
 # Check if the request was successful (status code 200)
 if response.status_code == 200:
-    # Parse the response JSON data
     data = response.json()
-    print(json.dumps(data, indent=2))  # Pretty-print the data for debugging
 else:
-    # If the request failed, print the status code and the error
     print(f"Request failed with status code {response.status_code}")
     print(response.text)
 
-# Function to process the response data and extract relevant information
 def process_data(data):
-    # Initialize a list to store processed items
     processed_items = []
-
-    # Iterate over each item in the response
     for item in data['data']['boards'][0]['items_page']['items']:
-        # Extract the name
         name = item['name']
-        
-        # Initialize email and email_content with empty strings
         email = ""
         email_content = ""
-        
-        # Access the first and second elements safely
-        if len(item['column_values']) > 0:
-            email = item['column_values'][0]['text']
-        if len(item['column_values']) > 1:
-            email_content = item['column_values'][1]['text']
-        
-        # Append the processed item to the list
-        processed_items.append({
-            "name": name,
-            "client_email": email,
-            "email_content": email_content
-        })
-
+        for column in item['column_values']:
+            if column['id'] == 'email__1':
+                email = column['text']
+            elif column['id'] == 'long_text__1':
+                email_content = column['text']
+        if email:
+            processed_items.append({
+                "name": name,
+                "client_email": email,
+                "email_content": email_content
+            })
     return processed_items
 
-# Process the data if the request was successful
-if response.status_code == 200:
-    processed_items = process_data(data)
-    print(json.dumps(processed_items, indent=2))  # Print the processed data for debugging
+processed_items = process_data(data)
+
+def send_email(to_email, subject, content):
+    message = Mail(
+        from_email='apitesting91@gmail.com',
+        to_emails=[to_email, 'apitesting91@gmail.com'],  # Send to the client and also BCC to yourself for testing
+        subject=subject,
+        html_content=content
+    )
+    try:
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
+        response = sg.send(message)
+        print(f"Email sent to {to_email}: {response.status_code}")
+    except Exception as e:
+        print(f"Failed to send email to {to_email}: {str(e)}")
+
+for item in processed_items:
+    send_email(
+        to_email=item['client_email'],
+        subject=f"Update from {item['name']}",
+        content=item['email_content']
+    )
